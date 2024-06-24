@@ -6,10 +6,20 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+/**
+ * A concurrent server that handles HTTP GET requests to serve image or document files.
+ * It listens on port 35000 and spawns multiple threads to handle concurrent client connections.
+ */
 public class ConcurrentServerSendImageDocument {
 
     private static final int PORT = 35000;
 
+    /**
+     * Main method to start the concurrent server.
+     *
+     * @param args Command-line arguments (not used).
+     * @throws IOException If an I/O error occurs when creating the server socket.
+     */
     public static void main(String[] args) throws IOException {
         ServerSocket serverSocket = null;
         try {
@@ -21,17 +31,20 @@ public class ConcurrentServerSendImageDocument {
 
         System.out.println("Server is running and listening on port " + PORT + "...");
 
-        for(int i = 0; i<3; i++){
+        // Create threads to handle client requests concurrently
+        for (int i = 0; i < 3; i++) {
             RequestConcurrent request = new RequestConcurrent(serverSocket.accept());
             request.start();
         }
-
-
     }
 
+    /**
+     * Handles a client request by serving requested image or document files.
+     *
+     * @param clientSocket The socket representing the client connection.
+     */
     public static void handleClientRequest(Socket clientSocket) {
         try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-
              OutputStream out = clientSocket.getOutputStream()) {
 
             // Read the request line
@@ -49,7 +62,6 @@ public class ConcurrentServerSendImageDocument {
             String path = requestParts[1];
             String httpVersion = requestParts[2];
 
-
             if (!method.equals("GET")) {
                 sendErrorResponse(out, 405, "Method Not Allowed");
                 return;
@@ -57,7 +69,6 @@ public class ConcurrentServerSendImageDocument {
 
             // Serve the requested file
             String filePath = "src/main/resource/" + path;
-            //String filePath = "C:/Users/yeferson.mesa-v/Downloads/Urls/src/main/java/org/example/" + path;
             File file = new File(filePath);
             if (!file.exists() || file.isDirectory()) {
                 sendErrorResponse(out, 404, "Not Found");
@@ -72,8 +83,7 @@ public class ConcurrentServerSendImageDocument {
 
         } catch (IOException e) {
             e.printStackTrace();
-        }
-        finally {
+        } finally {
             try {
                 clientSocket.close();
             } catch (IOException e) {
@@ -82,6 +92,14 @@ public class ConcurrentServerSendImageDocument {
         }
     }
 
+    /**
+     * Sends an error response to the client.
+     *
+     * @param out          The output stream of the client socket.
+     * @param statusCode   The HTTP status code of the error response.
+     * @param statusMessage The status message corresponding to the status code.
+     * @throws IOException If an I/O error occurs while sending the response.
+     */
     private static void sendErrorResponse(OutputStream out, int statusCode, String statusMessage) throws IOException {
         PrintWriter writer = new PrintWriter(out);
         writer.println("HTTP/1.1 " + statusCode + " " + statusMessage);
@@ -91,6 +109,14 @@ public class ConcurrentServerSendImageDocument {
         writer.flush();
     }
 
+    /**
+     * Sends a success response with content to the client.
+     *
+     * @param out        The output stream of the client socket.
+     * @param content    The content (bytes) to send in the response body.
+     * @param contentType The MIME type of the content being sent.
+     * @throws IOException If an I/O error occurs while sending the response.
+     */
     private static void sendSuccessResponse(OutputStream out, byte[] content, String contentType) throws IOException {
         PrintWriter writer = new PrintWriter(out);
         writer.println("HTTP/1.1 200 OK");
